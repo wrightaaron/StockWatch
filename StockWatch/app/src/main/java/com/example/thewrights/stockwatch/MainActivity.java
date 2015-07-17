@@ -1,7 +1,11 @@
 package com.example.thewrights.stockwatch;
 
+import android.app.AlertDialog;
+import android.content.DialogInterface;
+import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
 import android.view.Menu;
@@ -11,8 +15,8 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ListView;
 import android.widget.Spinner;
-import android.widget.TextView;
 
 import org.ksoap2.SoapEnvelope;
 import org.ksoap2.serialization.PropertyInfo;
@@ -30,6 +34,8 @@ import org.xml.sax.SAXException;
 
 import java.io.IOException;
 import java.io.StringReader;
+import java.util.ArrayList;
+import java.util.Map;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -59,17 +65,37 @@ public class MainActivity extends ActionBarActivity {
 
     EditText symbolIn;
     Button btnStock;
-    TextView result;
+    ListView result;
     Spinner favorites;
-    @Override
+    SharedPreferences sharedPrefs;
+    AlertDialog.Builder alert;
+    ArrayList<String> faveList;
+    ArrayList<String> infoList;
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this);
+        faveList = new ArrayList<String>();
+        Map<String,?> keys = sharedPrefs.getAll();
+        if(keys.size() == 0)
+        {
+            faveList.add("You have no favorites yet.");
+        }
+        else
+        {
+            faveList.add("-- Select a favorite --");
+        }
+        for(Map.Entry<String,?> entry : keys.entrySet())
+        {
+            faveList.add(entry.getValue().toString());
+            /*Log.d("map values",entry.getKey() + ": " +
+                    entry.getValue().toString());*/
+        }
         symbolIn = (EditText)findViewById(R.id.txtSymbol);
-        result = (TextView)findViewById(R.id.tvStock);
+        result = (ListView)findViewById(R.id.lstStock);
         favorites = (Spinner)findViewById(R.id.dropSymbols);
-        String[] faves = {"Select Favorite", "dis", "msn", "mic"};
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_dropdown_item, faves);
+        //String[] faves = {"Select Favorite", "dis", "msn", "mic"};
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_dropdown_item, faveList);
         favorites.setAdapter(adapter);
         favorites.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
@@ -93,12 +119,42 @@ public class MainActivity extends ActionBarActivity {
         btnStock.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (symbolIn.length() != 0 && symbolIn.getText().toString() != "") {
+                if (symbolIn.length() != 0 && symbolIn.getText().toString() != "")
+                {
+                    alert = new AlertDialog.Builder(MainActivity.this);
+                    alert.setMessage("Would you like to add this stock to your favorites?").setPositiveButton("Yes", new DialogInterface.OnClickListener()
+                    {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which)
+                        {
+                            SharedPreferences.Editor editor = sharedPrefs.edit();
+                            editor.putString(symbol, symbol);
+                            editor.commit();
+                            dialog.dismiss();
+                        }
+                    }).setNegativeButton("No", new DialogInterface.OnClickListener()
+                    {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which)
+                        {
+                            dialog.dismiss();
+                        }
+                    }).create();
+                    alert.show();
                     MainActivity.symbol = symbolIn.getText().toString();
                     AsyncCallWS task = new AsyncCallWS();
                     task.execute();
-                } else {
-                    result.setText("Please enter a value");
+                } else
+                {
+                    alert = new AlertDialog.Builder(MainActivity.this);
+                    alert.setMessage("Please enter a value or select from the list of favorites.")
+                            .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    dialog.dismiss();
+                                }
+                            }).create();
+                    alert.show();
                 }
             }
         });
@@ -150,8 +206,8 @@ public class MainActivity extends ActionBarActivity {
             SoapPrimitive response = (SoapPrimitive)envelope.getResponse();
             String stockInfo1 = response.toString();
             String[] tagNames = {"Name", "Last", "High", "Low", "PercentageChange"};
-            String stockName = getElement(tagNames, stockInfo1);
-            stockInfo = "Stock Info\n" + stockName;
+            getElement(tagNames, stockInfo1);
+            stockInfo = "Stock Info\n";
             Log.i(TAG, response.toString());
         }
         catch(Exception e)
@@ -163,7 +219,7 @@ public class MainActivity extends ActionBarActivity {
 
     //Borrowed and modified from http://www.java2s.com/Code/Java/XML/ParseanXMLstringUsingDOMandaStringReader.htm
     // Iterates through an array of tag names to get desired elemnt values
-    private String getElement(String[] tagNames, String xml) throws ParserConfigurationException, IOException, SAXException
+    private void getElement(String[] tagNames, String xml) throws ParserConfigurationException, IOException, SAXException
     {
         String val = "";
         DocumentBuilder db = DocumentBuilderFactory.newInstance().newDocumentBuilder();
@@ -171,7 +227,7 @@ public class MainActivity extends ActionBarActivity {
         is.setCharacterStream(new StringReader(xml));
         Document doc = db.parse(is);
         NodeList nodes = doc.getElementsByTagName("Stock");
-
+        infoList = new ArrayList<String>();
         for (int i = 0; i < nodes.getLength(); i++)
         {
             Element element = (Element) nodes.item(i);
@@ -179,10 +235,11 @@ public class MainActivity extends ActionBarActivity {
             {
                 NodeList nodeItem = element.getElementsByTagName(tagNames[tn]);
                 Element itemLine = (Element) nodeItem.item(0);
-                val += (tagNames[tn] + ": " + getCharacterDataFromElement(itemLine) + "\n");
+                val = (tagNames[tn] + ": " + getCharacterDataFromElement(itemLine));
+                infoList.add(val);
             }
         }
-        return val;
+
     }
 
     public static String getCharacterDataFromElement(Element e)
@@ -210,14 +267,15 @@ public class MainActivity extends ActionBarActivity {
         protected void onPostExecute(Void r)
         {
             Log.i(TAG, "onPostExecute");
-            result.setText(stockInfo);
+            result = (ListView)findViewById(R.id.lstStock);
+            ArrayAdapter<String> resultAdapter = new ArrayAdapter<String>(MainActivity.this, android.R.layout.simple_list_item_1, infoList);
+            result.setAdapter(resultAdapter);
         }
 
         @Override
         protected void onPreExecute()
         {
             Log.i(TAG, "onPreExecute");
-            result.setText("Fetching Stock Info");
         }
 
         @Override

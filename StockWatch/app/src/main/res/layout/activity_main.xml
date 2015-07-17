@@ -32,15 +32,6 @@
         android:layout_alignLeft="@+id/txtSymbol"
         android:layout_alignStart="@+id/txtSymbol" />
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceLarge"
-        android:id="@+id/tvStock"
-        android:layout_below="@+id/btnGetStock"
-        android:layout_alignLeft="@+id/txtSymbol"
-        android:layout_alignStart="@+id/txtSymbol" />
-
     <Spinner
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -49,4 +40,13 @@
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
         android:spinnerMode="dropdown" />
+
+    <ListView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/lstStock"
+        android:layout_below="@+id/btnGetStock"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:choiceMode="singleChoice" />
 </RelativeLayout>
