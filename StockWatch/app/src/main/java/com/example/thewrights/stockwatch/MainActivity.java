@@ -1,7 +1,9 @@
 package com.example.thewrights.stockwatch;
 
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -11,12 +13,14 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Spinner;
+import android.widget.TextView;
 
 import org.ksoap2.SoapEnvelope;
 import org.ksoap2.serialization.PropertyInfo;
@@ -63,46 +67,51 @@ public class MainActivity extends ActionBarActivity {
     private static String symbol;
     private static String stockInfo;
 
+    TextView title;
     EditText symbolIn;
     Button btnStock;
     ListView result;
     Spinner favorites;
-    SharedPreferences sharedPrefs;
+    Button editFaves;
+    static SharedPreferences sharedPrefs;
     AlertDialog.Builder alert;
-    ArrayList<String> faveList;
+    static ArrayList<String> faveList;
     ArrayList<String> infoList;
+    boolean isValidSymbol;
+    static Map<String,?> keys;
+    static ArrayAdapter adapter;
+
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        editFaves = (Button)findViewById(R.id.btnEdit);
+        editFaves.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, EditFavorites.class);
+                startActivity(intent);
+                if (MainActivity.this.hasWindowFocus()) {
+                    reloadData();
+                }
+            }
+        });
+        isValidSymbol = true;
         sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this);
         faveList = new ArrayList<String>();
-        Map<String,?> keys = sharedPrefs.getAll();
-        if(keys.size() == 0)
-        {
-            faveList.add("You have no favorites yet.");
-        }
-        else
-        {
-            faveList.add("-- Select a favorite --");
-        }
-        for(Map.Entry<String,?> entry : keys.entrySet())
-        {
-            faveList.add(entry.getValue().toString());
-            /*Log.d("map values",entry.getKey() + ": " +
-                    entry.getValue().toString());*/
-        }
+        //Getting all saved items as a mapped set of key value pairs to iterate over and fill the favorites dropdown list
+        getFaves();
         symbolIn = (EditText)findViewById(R.id.txtSymbol);
         result = (ListView)findViewById(R.id.lstStock);
         favorites = (Spinner)findViewById(R.id.dropSymbols);
         //String[] faves = {"Select Favorite", "dis", "msn", "mic"};
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_dropdown_item, faveList);
+        adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_dropdown_item, faveList);
         favorites.setAdapter(adapter);
         favorites.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id)
             {
-                if(position >0)
-                {
+                if(position >0) {
+                    hideKeyboard();
                     MainActivity.symbol = String.valueOf(favorites.getSelectedItem());
                     AsyncCallWS task = new AsyncCallWS();
                     task.execute();
@@ -110,53 +119,35 @@ public class MainActivity extends ActionBarActivity {
             }
 
             @Override
-            public void onNothingSelected(AdapterView<?> parent)
-            {
+            public void onNothingSelected(AdapterView<?> parent) {
 
             }
         });
-        btnStock = (Button)findViewById(R.id.btnGetStock);
+        btnStock = (Button) findViewById(R.id.btnGetStock);
         btnStock.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View v) {
+            public void onClick(View v)
+            {
                 if (symbolIn.length() != 0 && symbolIn.getText().toString() != "")
                 {
+                    MainActivity.symbol = symbolIn.getText().toString();
+                    AsyncCallWS task = new AsyncCallWS();
+                    task.execute();
+                }
+                else
+                {
                     alert = new AlertDialog.Builder(MainActivity.this);
-                    alert.setMessage("Would you like to add this stock to your favorites?").setPositiveButton("Yes", new DialogInterface.OnClickListener()
-                    {
+                    alert.setMessage("Please enter a value or select from the list of favorites.").setPositiveButton("Ok", new DialogInterface.OnClickListener() {
                         @Override
-                        public void onClick(DialogInterface dialog, int which)
-                        {
-                            SharedPreferences.Editor editor = sharedPrefs.edit();
-                            editor.putString(symbol, symbol);
-                            editor.commit();
-                            dialog.dismiss();
-                        }
-                    }).setNegativeButton("No", new DialogInterface.OnClickListener()
-                    {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which)
-                        {
+                        public void onClick(DialogInterface dialog, int which) {
                             dialog.dismiss();
                         }
                     }).create();
                     alert.show();
-                    MainActivity.symbol = symbolIn.getText().toString();
-                    AsyncCallWS task = new AsyncCallWS();
-                    task.execute();
-                } else
-                {
-                    alert = new AlertDialog.Builder(MainActivity.this);
-                    alert.setMessage("Please enter a value or select from the list of favorites.")
-                            .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-                                    dialog.dismiss();
-                                }
-                            }).create();
-                    alert.show();
                 }
+                hideKeyboard();
             }
+
         });
     }
 
@@ -180,11 +171,6 @@ public class MainActivity extends ActionBarActivity {
         }
 
         return super.onOptionsItemSelected(item);
-    }
-
-    public void getStock(View view)
-    {
-
     }
 
     public void getInfo(String symbol)
@@ -237,6 +223,15 @@ public class MainActivity extends ActionBarActivity {
                 Element itemLine = (Element) nodeItem.item(0);
                 val = (tagNames[tn] + ": " + getCharacterDataFromElement(itemLine));
                 infoList.add(val);
+
+                if(val.contains("N/A"))
+                {
+                    isValidSymbol = false;
+                }
+                else
+                {
+                    isValidSymbol = true;
+                }
             }
         }
 
@@ -267,9 +262,51 @@ public class MainActivity extends ActionBarActivity {
         protected void onPostExecute(Void r)
         {
             Log.i(TAG, "onPostExecute");
-            result = (ListView)findViewById(R.id.lstStock);
-            ArrayAdapter<String> resultAdapter = new ArrayAdapter<String>(MainActivity.this, android.R.layout.simple_list_item_1, infoList);
-            result.setAdapter(resultAdapter);
+            if(isValidSymbol)
+            {
+                if(!keys.containsKey(symbol))
+                {
+                    alert = new AlertDialog.Builder(MainActivity.this);
+                    alert.setMessage("Would you like to add this stock to your favorites?").setPositiveButton("Yes", new DialogInterface.OnClickListener()
+                    {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which)
+                        {
+                            SharedPreferences.Editor editor = sharedPrefs.edit();
+                            editor.putString(symbol, symbol);
+                            editor.commit();
+                            reloadData();
+                            dialog.dismiss();
+                        }
+                    }).setNegativeButton("No", new DialogInterface.OnClickListener()
+                    {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which)
+                        {
+                            dialog.dismiss();
+                        }
+                    }).create();
+                    alert.show();
+                }
+                result = (ListView) findViewById(R.id.lstStock);
+                ArrayAdapter<String> resultAdapter = new ArrayAdapter<String>(MainActivity.this, android.R.layout.simple_list_item_1, infoList);
+                result.setAdapter(resultAdapter);
+
+            }
+            else
+            {
+                alert = new AlertDialog.Builder(MainActivity.this);
+                alert.setMessage(symbol + " is not a valid stock symbol").setPositiveButton("Ok", new DialogInterface.OnClickListener()
+                {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which)
+                    {
+                        dialog.dismiss();
+                    }
+                }).setTitle("Invalid Stock Symbol").create();
+                alert.show();
+            }
+
         }
 
         @Override
@@ -282,7 +319,52 @@ public class MainActivity extends ActionBarActivity {
         protected void onProgressUpdate(Void... values)
         {
             Log.i(TAG, "onProgressUpdate");
+        }
+    }
 
+    public boolean hideKeyboard()
+    {
+        boolean worked = true;
+        try
+        {
+            InputMethodManager inputManager = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+            inputManager.hideSoftInputFromWindow(getCurrentFocus().getWindowToken(),InputMethodManager.HIDE_NOT_ALWAYS);
+            worked = true;
+        }
+        catch(Exception e)
+        {
+            worked = false;
+        }
+        finally
+        {
+            return worked;
+        }
+    }
+
+    public void reloadData(){
+        // get new modified random data
+        getFaves();
+        adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_dropdown_item, faveList);
+        adapter.notifyDataSetChanged();
+    }
+
+    public void getFaves()
+    {
+        faveList.clear();
+        keys = sharedPrefs.getAll();
+        if(keys.size() == 0)
+        {
+            faveList.add("You have no favorites yet.");
+        }
+        else
+        {
+            faveList.add("-- Select a favorite --");
+        }
+        for(Map.Entry<String,?> entry : keys.entrySet())
+        {
+            faveList.add(entry.getValue().toString());
+            /*Log.d("map values",entry.getKey() + ": " +
+                    entry.getValue().toString());*/
         }
     }
 }
