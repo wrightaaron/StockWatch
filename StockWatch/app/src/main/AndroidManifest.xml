@@ -7,7 +7,7 @@
 
     <application
         android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@mipmap/ic_stocks"
         android:label="@string/app_name"
         android:theme="@style/AppTheme" >
         <activity
@@ -21,7 +21,7 @@
         </activity>
         <activity
             android:name=".EditFavorites"
-            android:label="@string/title_activity_edit_favorites" >
+            android:label="@string/app_name" >
         </activity>
     </application>
 

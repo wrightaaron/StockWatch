@@ -7,59 +7,50 @@
     android:background="#000000"
     android:id="@+id/mainView">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceLarge"
-        android:text="Stock Watch"
-        android:id="@+id/tvTitle"
-        android:layout_alignParentTop="true"
-        android:layout_centerHorizontal="true"
-        android:textColor="#FFFFFF" />
-
     <EditText
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:id="@+id/txtSymbol"
         android:hint="Symbol"
-        android:layout_below="@+id/dropSymbols"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true"
         android:textColor="#FFFFFF"
-        android:textColorHint="#FFFFFF" />
+        android:textColorHint="#FFFFFF"
+        android:layout_alignBottom="@+id/btnGetStock"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true" />
 
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Get Stock"
         android:id="@+id/btnGetStock"
-        android:layout_below="@+id/txtSymbol"
-        android:layout_alignLeft="@+id/txtSymbol"
-        android:layout_alignStart="@+id/txtSymbol"
-        android:textColor="#FFFFFF"
-        android:textColorHint="#FFFFFF" />
+        android:layout_below="@+id/dropSymbols"
+        android:layout_toRightOf="@+id/dropSymbols"
+        android:layout_marginTop="40dp"
+        android:layout_alignRight="@+id/lstStock"
+        android:layout_alignEnd="@+id/lstStock" />
 
     <Spinner
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:id="@+id/dropSymbols"
-        android:layout_below="@+id/tvTitle"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true"
         android:spinnerMode="dropdown"
         android:background="#FFFFFF"
-        android:layout_toLeftOf="@+id/tvTitle"
-        android:layout_toStartOf="@+id/tvTitle" />
+        android:layout_alignParentTop="true"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:layout_toLeftOf="@+id/btnEdit"
+        android:layout_toStartOf="@+id/btnEdit" />
 
     <ListView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:id="@+id/lstStock"
-        android:layout_below="@+id/btnGetStock"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true"
         android:choiceMode="singleChoice"
-        android:background="#FFFFFF" />
+        android:background="#FFFFFF"
+        android:layout_marginTop="28dp"
+        android:layout_below="@+id/txtSymbol"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true" />
 
     <Button
         android:layout_width="wrap_content"
@@ -67,6 +58,6 @@
         android:text="Edit Favorites"
         android:id="@+id/btnEdit"
         android:layout_alignTop="@+id/dropSymbols"
-        android:layout_alignLeft="@+id/tvTitle"
-        android:layout_alignStart="@+id/tvTitle" />
+        android:layout_alignRight="@+id/lstStock"
+        android:layout_alignEnd="@+id/lstStock" />
 </RelativeLayout>
